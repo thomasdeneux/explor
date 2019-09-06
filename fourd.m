@@ -18,6 +18,8 @@ function a = fourd(varargin)
 % - data    ['data' flag is optional] n-dimentional array
 %           the array can be preceded by vectors of coordinates (for
 %           example: fn4D(x,y,z,data,...)
+%           can also be a VideoReader object, in which case type must be
+%           '2d'
 % - type    ['type' flag is optional] one of:
 %           'plot'    time courses display (section of data along the 1st dimension) [default for 1D data]
 %           '2dplot'  time courses display (section of data along the 3rd dimension)
@@ -64,12 +66,18 @@ function a = fourd(varargin)
 % - autolinepos
 % - ystep
 % - movelinegroup
+% 
+% LIST DISPLAY
+% - averageselection    true [=default] to average over selection           
 %
 % SLIDER
 % - layout              'up', 'down', 'right' or 'left'
 %
 % OTHER DISPLAY
 % - ncol        for 'frame' type
+% 
+% MISC
+% - nmovieframe         number of frames when data is a VideoFrame object
 
 % initialization options
 opt = struct( ...
@@ -103,7 +111,9 @@ opt = struct( ...
     'shapemode',        'ellipse', ...
     'units',            [], ...
     'layout',           'auto', ...
-    'decoration',       [] ...
+    'decoration',       [], ...
+    'averageselection', true, ...
+    'nmovieframe',      [] ...
     );
 opt1 = BuildOptions(opt,varargin{:});
 opt2 = ArrangeOptions(opt1);
@@ -131,14 +141,10 @@ if ~isempty(opt.geometry)
 else
     if ~isempty(opt.focus)
         a.F = opt.focus;
-        if ~isempty(opt.labels), a.F.labels = opt.labels; end
-        if ~isempty(opt.units), a.F.units = opt.units; end
     else
         a.F = focus.find(opt.key);
         if isempty(opt.labels), opt.labels = {'x' 'y' 't'}; end
         if isempty(opt.units), opt.units = {'px' 'px' 'frame'}; end
-        a.F.labels = opt.labels;
-        if ~isempty(opt.units), a.F.units = opt.units; end
     end
     
     % find a rotation object that matches size and mat
@@ -146,6 +152,14 @@ else
     nd = length(siz);
     if ~isempty(opt.mat)
         mat = buildMat(opt.mat,nd,nd);
+    elseif strcmp(opt.type,'list') && isvector(opt.data)
+        % this is a shortcut: opt.proj here corresponds not to the
+        % projection but to the permutation wrt. focus
+        opt.data = opt.data(:);
+        siz = length(opt.data);
+        nd = 1;
+        mat = buildMat({1 0 opt.proj},1,1);
+        opt.proj = 1;
     else
         switch length(opt.spacescal)
             case 1
@@ -172,6 +186,14 @@ else
     if isempty(a.G)
         a.G = rotation(a.F,'sizes',siz,'mat',mat);
     end
+    if ~isempty(opt.labels), a.G.labels = opt.labels; end
+    if ~isempty(opt.units), a.G.units = opt.units; end
+end
+
+% No data: we have set up the focus and geometry for next times, this is
+% fine we can stop here
+if isempty(opt.data)
+    return
 end
 
 % Projection and Active Display
@@ -198,8 +220,19 @@ switch lower(opt.type)
             'movelinegroup',opt.movelinegroup, ...
             'navigation',opt.navigation,'scrollwheel',opt.scrollwheel);
     case '2d'
-        a.SI = projection(a.G,opt.proj,'dimsplus',opt.dimsplus,'data',opt.data, ...
-            'decoration',opt.decoration);
+        if isa(opt.data,'VideoReader')
+            if ~isequal(opt.proj,[1 2])
+                error 'projection must be [1 2] for a video object'
+            end
+            if isempty(opt.nmovieframe)
+                a.SI = videoprojection(a.G,opt.data);
+            else
+                a.SI = videoprojection(a.G,opt.data,opt.nmovieframe);
+            end
+        else
+            a.SI = projection(a.G,opt.proj,'dimsplus',opt.dimsplus,'data',opt.data, ...
+                'decoration',opt.decoration);
+        end
         a.D = activedisplayImage(a.SI,'in',opt.in, ...
             'clipmode',opt.clipmode,'clip',opt.clip, ...
             'selshow',opt.selshow,'seldims',opt.seldims,'shapemode',opt.shapemode, ...
@@ -236,14 +269,10 @@ switch lower(opt.type)
     case 'list'
         if ~isscalar(opt.proj), error 'projection should have one dimension for list display', end
         a.SI = projection(a.G,opt.proj); %,'data',opt.data);
-        a.D = activedisplayList(a.SI,'in',opt.in);
+        a.D = activedisplayList(a.SI,'in',opt.in,'selmultin',~opt.averageselection);
     otherwise
         error('cannot handle type ''%s'' yet',opt.type)
 end
-
-
-
-
 
 
 function opt = BuildOptions(opt,varargin)
@@ -257,6 +286,8 @@ while k<nargin
         opt.in = a;
     elseif isnumeric(a) || islogical(a)
         numdata{end+1} = a;
+    elseif isa(a,'VideoReader')
+        opt.data = a;
     elseif isa(a,'focus')
         opt.focus = a;
     elseif isa(a,'geometry')
@@ -318,9 +349,6 @@ end
 
 %---
 function opt = ArrangeOptions(opt)
-
-% data
-if isempty(opt.data), opt.data = 0; end
 
 % type
 % (empty type)

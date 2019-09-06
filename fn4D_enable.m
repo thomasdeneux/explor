@@ -11,9 +11,10 @@ else
 end
 for k=1:length(varargin)
     hl = varargin{k};
+    if ~isvalid(hl), continue, end
     switch class(hl)
         case {'event.listener','event.proplistener'}
-            varargin{k}.Enabled = b;
+            hl.Enabled = b;
         case 'handle.listener'
             set(hl,'enabled',fn_switch(b,'on','off'))
         otherwise

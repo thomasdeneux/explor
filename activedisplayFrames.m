@@ -197,10 +197,10 @@ classdef activedisplayFrames < fn4Dhandle
             if strcmp(D.posmode,'figure')
                 % axes position will best fit the changes of the figure
                 % size
-                D.listenaxpos = fn_pixelsizelistener(D.hf,@(h,evnt)displaysize(D));
+                D.listenaxpos = fn_pixelsizelistener(D.hf,D,@(h,evnt)displaysize(D));
             else
                 % figure size is ignored
-                D.listenaxpos = fn_pixelsizelistener(D.ha,@(h,evnt)displaysize(D));
+                D.listenaxpos = fn_pixelsizelistener(D.ha,D,@(h,evnt)displaysize(D));
             end
             
             % set more properties
@@ -557,7 +557,7 @@ classdef activedisplayFrames < fn4Dhandle
                 case {'link1','link2'}
                     D.CL = cliplink.find(clipmode,D.clip);
                     D.clip = D.CL.clip;
-                    D.C2D = event.listener(D.CL,'ChangeClip', ...
+                    D.C2D = connectlistener(D.CL,D,'ChangeClip', ...
                         @(cl,evnt)clipfromlink(D,D.CL));
             end
         end       

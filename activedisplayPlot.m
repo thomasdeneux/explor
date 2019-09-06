@@ -122,7 +122,7 @@ classdef activedisplayPlot < fn4Dhandle  %#ok<*MCSUP>
                 'linewidth',3);
             D.scalebar(2) = text('Parent',D.ha,'Color','k','visible','off', ...
                 'horizontalalignment','right','verticalalignment','middle');
-            D.listenaxpos = fn_pixelsizelistener(D.ha,@(h,evnt)displayscalebar(D));
+            D.listenaxpos = fn_pixelsizelistener(D.ha,D,@(h,evnt)displayscalebar(D));
             fn4D_enable('off',D.listenaxpos)
             set(D.scalebar,'DeleteFcn',@(h,evnt)fn4D_enable('on',D.listenaxpos))
             
@@ -150,11 +150,11 @@ classdef activedisplayPlot < fn4Dhandle  %#ok<*MCSUP>
             D.ha2(3) = axes('parent',D.hf,'buttondownfcn',@(u,e)Mouse(D,'outsideboth'));
             fn_controlpositions(D.ha2(3),D.ha,[0 0 0 0], [-15 -15 15 15]);
             set(D.ha2,'handlevisibility','off')
-            D.listenparentcolor = addlistener(D.hf,'Color','PostSet',@(u,e)updateSecondaryAxesColor());
+            D.listenparentcolor = connectlistener(D.hf,D,'Color','PostSet',@(u,e)updateSecondaryAxesColor());
             updateSecondaryAxesColor()
             function updateSecondaryAxesColor()
-                col = get(D.hf,'color');
                 try %#ok<TRYNC>
+                    col = get(D.hf,'color');
                     set(D.ha2,'color',col, ...
                         'xtick',[],'xcolor',col,'ytick',[],'ycolor',col)
                 end
@@ -1103,7 +1103,7 @@ classdef activedisplayPlot < fn4Dhandle  %#ok<*MCSUP>
                     kitem = 2+str2double(clipmode(5));
                     D.CL = cliplink.find(clipmode,D.clip);
                     D.clip = D.CL.clip;
-                    D.C2D = event.listener(D.CL,'ChangeClip', ...
+                    D.C2D = connectlistener(D.CL,D,'ChangeClip', ...
                         @(cl,evnt)clipfromlink(D,D.CL));
                 otherwise
                     D.clipmode = slice;

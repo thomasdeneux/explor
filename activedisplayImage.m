@@ -216,7 +216,7 @@ classdef activedisplayImage < fn4Dhandle
                 'linewidth',3);
             D.scalebar(2) = text('Parent',D.ha,'Color','white','visible','off', ...
                 'horizontalalignment','center','verticalalignment','middle');
-            D.listenaxpos = fn_pixelsizelistener(D.ha,@(h,evnt)displayscalebar(D));
+            D.listenaxpos = fn_pixelsizelistener(D.ha,D,@(h,evnt)displayscalebar(D));
             fn4D_enable('off',D.listenaxpos)
             
             % value and buttons; TODO: don't use fn_coordinates inside fn_controlpositions
@@ -1214,7 +1214,7 @@ classdef activedisplayImage < fn4Dhandle
                 case {'link1','link2'}
                     D.CL = cliplink.find(clipmode,D.clip);
                     D.clip = D.CL.clip;
-                    D.C2D = event.listener(D.CL,'ChangeClip', ...
+                    D.C2D = connectlistener(D.CL,D,'ChangeClip', ...
                         @(cl,evnt)clipfromlink(D,D.CL));
             end
         end      

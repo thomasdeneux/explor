@@ -107,7 +107,7 @@ classdef activedisplay3D < fn4Dhandle
             % axes will be re-positionned later when axis will be set
             for i=1:3, D.ha(i) = subplot(2,2,i); end
             set(D.ha,'units','pixel')
-            fn_pixelsizelistener(D.hf,@(u,e)axespositions(D))
+            fn_pixelsizelistener(D.hf,D,@(u,e)axespositions(D))
             if isempty(get(D.hf,'Tag')), set(D.hf,'Tag','fn4D'), end
             
             % handle to change the size of the 3 axes
@@ -135,7 +135,7 @@ classdef activedisplay3D < fn4Dhandle
             D.scalebar(2) = text('Parent',D.ha(1),'Color','white','visible','off', ...
                 'horizontalalignment','center','verticalalignment','middle');
             disp 'warning: position listener ''listenaxpos'' disabled for compatibility with new Matlab version'
-            %             D.listenaxpos = addlistener(D.ha(1),'Position','PostSet', ...
+            %             D.listenaxpos = connectlistener(D.ha(1),D,'Position','PostSet', ...
             %                 @(h,evnt)displayscalebar(D));
             %             D.listenaxpos.Enable = 'off';
             
@@ -889,7 +889,7 @@ classdef activedisplay3D < fn4Dhandle
                 case {'link1','link2'}
                     D.CL = cliplink.find(clipmode,D.clip);
                     D.clip = D.CL.clip;
-                    D.C2D = event.listener(D.CL,'ChangeClip', ...
+                    D.C2D = connectlistener(D.CL,D,'ChangeClip', ...
                         @(cl,evnt)clipfromlink(D,D.CL));
             end
         end

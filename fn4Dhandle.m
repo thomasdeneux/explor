@@ -111,8 +111,8 @@ classdef fn4Dhandle < hgsetget
         % register a new parent
         function addparent(obj,A)
             obj.links(end+1) = struct('parent',A, ...
-                'Lview',    addlistener(A,'ChangeView',@(u,ev)updateDownNoloop(obj,A,ev)), ...
-                'Lcheck',   addlistener(A,'CheckChildren',@(u,ev)answerCheck(obj,A)));
+                'Lview',    connectlistener(A,obj,'ChangeView',@(u,ev)updateDownNoloop(obj,A,ev)), ...
+                'Lcheck',   connectlistener(A,obj,'CheckChildren',@(u,ev)answerCheck(obj,A)));
         end
                 
         % notification (both in 'up' and 'down' directions)

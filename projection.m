@@ -33,8 +33,7 @@ classdef projection < sliceinfo
     properties (Dependent)
         data
         background
-    end
-    
+    end   
     properties (SetAccess='private', GetAccess='public')
         % secondary properties (changed in function 'setauxiliary')
         datasizes = [];
@@ -63,8 +62,7 @@ classdef projection < sliceinfo
                 error('syntax changed for setting dimsplus')
             end
             set(P,varargin{:})
-        end
-        
+        end        
     end
     
     % Update upon events
@@ -147,7 +145,7 @@ classdef projection < sliceinfo
     end
     
     % Slicing
-    methods
+    methods (Access='private')
         function slicing(P,dims,flag,ind,value)
             fn4D_dbstack
             % input

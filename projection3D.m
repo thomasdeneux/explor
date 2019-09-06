@@ -13,7 +13,7 @@ classdef projection3D < projection
             end
             P = P@projection(G,proj);
             % update slices upon change in 'ij'
-            hl = addlistener(P,'ij','PostSet',@(m,evnt)updateij(P));
+            hl = connectlistener(P,G,'ij','PostSet',@(m,evnt)updateij(P));
             hl.Recursive = true;
             % set properties
             if nargin==2, return, end
