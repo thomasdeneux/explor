@@ -9,6 +9,7 @@ classdef activedisplayList < fn4Dhandle
     properties (SetAccess='private')
         hu
         hf
+        hp
         hlabel
         currentsel
         menu
@@ -53,22 +54,26 @@ classdef activedisplayList < fn4Dhandle
             if isempty(opt.in), opt.in = gcf; end
             if ~ishandle(opt.in) && mod(opt.in,1)==0 && opt.in>0, figure(opt.in), end
             switch get(opt.in,'type')
-                case 'figure'
-                    D.hf = opt.in;
-                    figure(opt.in), clf, set(D.hf,'menubar','none')
-                    D.hu = uicontrol('units','normalized','pos',[0 0 1 1]);
+                case {'figure' 'uipanel'}
+                    D.hp = opt.in;
+                    delete(get(opt.in,'children'))
+                    if strcmp(get(opt.in,'type'),'figure')
+                        figure(opt.in), set(opt.in,'menubar','none')
+                    end
+                    D.hu = uicontrol('parent',D.hp,'units','normalized','pos',[0 0 1 1]);
                 case 'uicontrol'
                     D.hu = opt.in;
-                    D.hf = get(opt.in,'parent');
+                    D.hp = get(opt.in,'parent');
                 case 'axes'
                     % replace axes by an uicontrol
                     ha = opt.in;
-                    D.hf = get(ha,'parent');
-                    D.hu = uicontrol('parent',D.hf,'units',get(ha,'units'),'pos',get(ha,'pos'));
+                    D.hp = get(ha,'parent');
+                    D.hu = uicontrol('parent',D.hp,'units',get(ha,'units'),'pos',get(ha,'pos'));
                     delete(ha)
                 otherwise
                     error('bad handle')
             end
+            D.hf = fn_parentfigure(D.hp);
             if isempty(get(D.hf,'Tag')), set(D.hf,'Tag','used by fn4D'), end
             
             % context menu
@@ -410,7 +415,7 @@ classdef activedisplayList < fn4Dhandle
                 delete(D.hlabel)
                 D.hlabel = [];
             else
-                D.hlabel = uicontrol('parent',D.hf,'style','text','string',D.SI.labels{1}, ...
+                D.hlabel = uicontrol('parent',D.hp,'style','text','string',D.SI.labels{1}, ...
                     'horizontalalignment','center');
                 fn_controlpositions(D.hlabel,D.hu,[0 1 1 0],[0 2 0 15])
             end

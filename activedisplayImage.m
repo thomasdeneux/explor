@@ -230,13 +230,15 @@ classdef activedisplayImage < fn4Dhandle
             [ii jj] = meshgrid(-9:0,9:-1:0); x=(0-ii)./(jj-ii)-.5; x(end)=0;
             set(D.buttons(1),'enable','inactive','cdata',fn_clip(sin(pi*x),[-1 1],'gray'))
             fn_controlpositions(D.buttons(1),D.ha,[0 1], [122 0 10 10]); % was previously [102 -10 10 10]
-            %             D.buttons(2) = uicontrol('Parent',D.hf,'hittest','off', ...
-            %                 'backgroundcolor',[.8 .8 0],'foregroundcolor',[.8 .8 0]);
-            %             fn_controlpositions(D.buttons(2),D.ha,[0 1], [132 0 10 10]); % was previously [112 -10 10 10]
-            %             D.buttons(3) = uicontrol('Parent',D.hf, ...
-            %                 'backgroundcolor',[.8 .8 0],'foregroundcolor',[.8 .8 0]);
-            %             fn_controlpositions(D.buttons(3),D.ha,[0 1], [138 0 2 10]); % was previously [118 -10 2 10]
-            %             set(D.buttons,'style','frame','enable','off')
+%             % button for projection object (note that D.buttons(2) only
+%             % acts as a separator)
+%             D.buttons(2) = uicontrol('Parent',D.hf,'hittest','off', ...
+%                 'backgroundcolor',[.8 .8 0],'foregroundcolor',[.8 .8 0]);
+%             fn_controlpositions(D.buttons(2),D.ha,[0 1], [132 0 10 10]); % was previously [112 -10 10 10]
+%             D.buttons(3) = uicontrol('Parent',D.hf, ...
+%                 'backgroundcolor',[.8 .8 0],'foregroundcolor',[.8 .8 0]);
+%             fn_controlpositions(D.buttons(3),D.ha,[0 1], [138 0 2 10]); % was previously [118 -10 2 10]
+%             set(D.buttons(2:3),'style','frame','enable','off')
             
             % callbacks (bottom-up)
             set(D.ha,'ButtonDownFcn',@(ha,evnt)Mouse(D))
@@ -244,7 +246,12 @@ classdef activedisplayImage < fn4Dhandle
             set(D.buttons(1),'buttondownfcn',@(hu,evnt)redbutton(D))
             fn_scrollwheelregister(D.ha,@(n)Scroll(D,n),fn_switch(D.scrollwheel,'on/off'))
             initlocalmenu(D)
-            %initlocalmenu(D.SI,D.buttons(3))
+%             try
+%                 initlocalmenu(D.SI,D.buttons(3))
+%             catch
+%                 delete(D.button(2:3))
+%                 D.buttons(2:3) = [];
+%             end
             
             % sliders (note that scroll wheel registration of slider must
             % occur after scroll wheel registration of axes)

@@ -8,6 +8,7 @@ classdef videoprojection < projection
     properties (SetAccess='private')
         videoObj
         rgb
+        button
     end
             
     % Constructor, destructor, and events
@@ -82,11 +83,19 @@ classdef videoprojection < projection
     % Frame slicing
     methods (Access='private')
         function sliceframe(P)
+            global kk
             fn4D_dbstack
             kframe = P.G.ijkl(3+P.rgb);
+            kk = [kk kframe];
             frame = permute(P.videoObj.read(kframe),[2 1 3]);
             P.slice = struct('active',true,'data',frame);
         end
     end
     
+    % Local menu
+    methods
+        function initlocalmenu(P,button)
+            P.button = button;
+        end
+    end
 end
