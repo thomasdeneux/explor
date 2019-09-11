@@ -25,6 +25,7 @@ function a = fourd(varargin)
 %           '2dplot'  time courses display (section of data along the 3rd dimension)
 %           'list'    navigation inside 1D data using selection inside a list
 %           'slider'  navigation inside 1D data using a scroller
+%           'player'  navigation inside 1D data with a looping movie
 %           '2d'      image display (2-dimensional section) [default for 2D data]
 %           '2dcol'   color image display (3-dimensional section)
 %           'snake'
@@ -38,20 +39,23 @@ function a = fourd(varargin)
 %                     [default for >=4D data, or when 'proj' option value is a cell array]
 %
 % GEOMETRIC INFO
-% - key (use 'newkey' to use an independent key, default key is 0)
-% - focus
-% - geometry
-% - mat
-% - dx
-% - dt
-% - tt
-% - proj
-% - dimsplus
+% - key         key for linking with other display [default=0], use 'newkey' to use an independent key
+% - focus       focus object to synchronize to (can synchronize any data, create with function 'focus')
+% - geometry    a geometry object to synchronize to (can synchronize only compatible data, create with 'geometry' or 'rotation(F)' where F is a focus)
+% - scale       scale of each dimension [default=1]
+% - start       starting point of each dimension [default=1 if unit is '', 'px' or 'frame', 0 otherwise]
+% - worlddim    world dimension (in 'focus') to which corresponds each data dimension (in 'geometry') [default=1:nddata]
+% - mat         full transformation definition: either {scale start-scale worlddim} or an (1+nd)*(1+nd) array
+% - dx          scale of dimensions 1 and 2 (assumed to be x and y)
+% - dt          scale of dimension 3 (assumed to be time)
+% - tt          full time vector
+% - proj        dimensions of the data to base the display on
+% - dimsplus    additional displayed dimensions (color channel for image, multiple lines for graphs)
 %
 % GENERAL GRAPHICS
-% - in
-% - labels
-% - units
+% - in          handle of graphic container (usually figure, uipanel or axes) [default=current figure/axes]
+% - labels      labels of each data dimension [default world dimension labels=x, y, time]
+% - units       units of each data dimension [default world dimension units=px, px, frame] 
 % - decoration
 %
 % IMAGE DISPLAY
@@ -59,19 +63,21 @@ function a = fourd(varargin)
 % - clipmode
 % - cmap
 % - selshow
-% - spacescal
 % - shapemode
 %
 % PLOT DISPLAY
 % - autolinepos
 % - ystep
 % - movelinegroup
+%
+% SNAKE
+% - snakedx
 % 
 % LIST DISPLAY
 % - averageselection    true [=default] to average over selection           
 %
 % SLIDER
-% - layout              'up', 'down', 'right' or 'left'
+% - layout      'up', 'down', 'right' or 'left'
 %
 % OTHER DISPLAY
 % - ncol        for 'frame' type
@@ -96,11 +102,14 @@ opt = struct( ...
     'ystep',    [], ...
     'dt',       1, ...
     'tt',       [], ...
-    'dx',       .8, ...
+    'dx',       1, ...
+    'scale',    [], ...
+    'start',    [], ...
+    'worlddim', [], ...
     'ncol',     4, ...
     'selshow',          true, ...
     'seldims',          'xy', ...
-    'spacescal',        [1 1], ...
+    'snakedx',          .8, ...
     'autolinepos',      '', ...
     'movelinegroup',    '', ...
     'linecol',          '', ...
@@ -116,7 +125,14 @@ opt = struct( ...
     'nmovieframe',      [] ...
     );
 opt1 = BuildOptions(opt,varargin{:});
-opt2 = ArrangeOptions(opt1);
+opt2 = ArrangeAndGeometry(opt1);
+
+% no data: we have set up the focus and geometry for next times, this is
+% fine we can stop here [doesn't work because no pointer is kept on them
+% and they are destroyed!]
+if isempty(opt2.data)
+    return
+end
 
 % display
 a = struct('key',[],'F',[],'G',[],'SI',[],'D',[]);
@@ -127,154 +143,7 @@ end
 % output?
 if nargout==0, clear a, end
 
-
-function a = Display(opt)
-
-% init structure
-a = struct('key',[],'F',[],'G',[],'SI',[],'D',[]);
-
-% Focus and Geometry
-if ~isempty(opt.geometry)
-    a.G = opt.geometry;
-    if ~isempty(opt.labels), a.G.labels = opt.labels; end
-    if ~isempty(opt.units), a.G.units = opt.units; end
-else
-    if ~isempty(opt.focus)
-        a.F = opt.focus;
-    else
-        a.F = focus.find(opt.key);
-        if isempty(opt.labels), opt.labels = {'x' 'y' 't'}; end
-        if isempty(opt.units), opt.units = {'px' 'px' 'frame'}; end
-    end
-    
-    % find a rotation object that matches size and mat
-    siz = size(opt.data);
-    nd = length(siz);
-    if ~isempty(opt.mat)
-        mat = buildMat(opt.mat,nd,nd);
-    elseif strcmp(opt.type,'list') && isvector(opt.data)
-        % this is a shortcut: opt.proj here corresponds not to the
-        % projection but to the permutation wrt. focus
-        opt.data = opt.data(:);
-        siz = length(opt.data);
-        nd = 1;
-        mat = buildMat({1 0 opt.proj},1,1);
-        opt.proj = 1;
-    else
-        switch length(opt.spacescal)
-            case 1
-                opt.spacescal = opt.spacescal([1 1]);
-            case 2
-            otherwise
-                error argument
-        end
-        scal = [opt.spacescal opt.dt];
-        trans = -scal;
-        if ~isempty(opt.tt)
-            trans(3) = opt.tt(1)-opt.dt;
-        end
-        mat = buildMat({scal trans},nd,nd);
-    end
-    c = a.F.getChildren;
-    a.G = [];
-    for i=1:length(c)
-        if isequal(c{i}.sizes,siz) && isequal(c{i}.mat,mat)
-            a.G = c{1};
-            break
-        end
-    end
-    if isempty(a.G)
-        a.G = rotation(a.F,'sizes',siz,'mat',mat);
-    end
-    if ~isempty(opt.labels), a.G.labels = opt.labels; end
-    if ~isempty(opt.units), a.G.units = opt.units; end
-end
-
-% No data: we have set up the focus and geometry for next times, this is
-% fine we can stop here
-if isempty(opt.data)
-    return
-end
-
-% Projection and Active Display
-switch lower(opt.type)
-    case 'plot'
-        a.SI = projection(a.G,opt.proj,'dimsplus',opt.dimsplus, ...
-            'data',opt.data,'decoration',opt.decoration);
-        if ndims(opt.data)>2 && length(opt.proj)>=3
-            if ~isempty(opt.in)
-                if fn_isfigurehandle(opt.in)
-                    hf = opt.in;
-                else
-                    hf = get(opt.in,'parent');
-                end
-            else
-                hf = gcf;
-            end
-            clf(hf)
-        end
-        a.D = activedisplayPlot(a.SI,'in',opt.in, ...
-            'ystep',opt.ystep, ...
-            'clipmode',opt.clipmode,'clip',opt.clip, ...
-            'autolinepos',opt.autolinepos, ...
-            'movelinegroup',opt.movelinegroup, ...
-            'navigation',opt.navigation,'scrollwheel',opt.scrollwheel);
-    case '2d'
-        if isa(opt.data,'VideoReader')
-            if ~isequal(opt.proj,[1 2])
-                error 'projection must be [1 2] for a video object'
-            end
-            if isempty(opt.nmovieframe)
-                a.SI = videoprojection(a.G,opt.data);
-            else
-                a.SI = videoprojection(a.G,opt.data,opt.nmovieframe);
-            end
-        else
-            a.SI = projection(a.G,opt.proj,'dimsplus',opt.dimsplus,'data',opt.data, ...
-                'decoration',opt.decoration);
-        end
-        a.D = activedisplayImage(a.SI,'in',opt.in, ...
-            'clipmode',opt.clipmode,'clip',opt.clip, ...
-            'selshow',opt.selshow,'seldims',opt.seldims,'shapemode',opt.shapemode, ...
-            'scaledisplay',opt.scaledisplay);
-        if ~isempty(opt.cmap), a.D.cmap = opt.cmap; end
-    case 'snake'
-        a.SI = snake2D(a.G,opt.proj,'dx',opt.dx,'data',opt.data, ...
-            'dimsplus',opt.dimsplus,'decoration',opt.decoration);
-        a.D = activedisplayImage(a.SI,'in',opt.in, ...
-            'clipmode',opt.clipmode,'clip',opt.clip, ...
-            'selshow',opt.selshow,'seldims',opt.seldims);
-    case {'3d' 'frame' 'grid'}
-        if strcmpi(opt.type,'3d') && isequal(opt.proj,1:3) ...
-                && size(opt.data,4)==3 && isempty(opt.dimsplus)
-            opt.dimsplus=4; 
-        end
-        a.SI = projection(a.G,opt.proj,'data',opt.data, ...
-            'dimsplus',opt.dimsplus,'decoration',opt.decoration);
-        switch lower(opt.type)
-            case '3d'
-                a.D = activedisplay3D(a.SI,'in',opt.in, ...
-                    'clipmode',opt.clipmode,'clip',opt.clip);
-            case 'frame'
-                a.D = activedisplayFrames(a.SI,'in',opt.in, ...
-                    'clipmode',opt.clipmode,'clip',opt.clip, ...
-                    'ncol',opt.ncol);
-            case 'grid'
-                a.D = activedisplayArray(a.SI,'in',opt.in);
-                if ~isempty(opt.cmap), a.D.cmap = opt.cmap; end
-        end
-    case 'slider'
-        a.SI = projection(a.G,opt.proj,'decoration',opt.decoration);
-        a.D = activedisplaySlider(a.SI,'in',opt.in,'layout',opt.layout);
-    case 'list'
-        if ~isscalar(opt.proj), error 'projection should have one dimension for list display', end
-        a.SI = projection(a.G,opt.proj); %,'data',opt.data);
-        a.D = activedisplayList(a.SI,'in',opt.in,'selmultin',~opt.averageselection);
-    otherwise
-        error('cannot handle type ''%s'' yet',opt.type)
-end
-
-
+%---
 function opt = BuildOptions(opt,varargin)
 % see help of fn4D
 
@@ -303,7 +172,7 @@ while k<nargin
     else
         a = lower(a);
         switch a
-            case {'list','slider','plot','2d','image','2dcol','2dplot','snake', ...
+            case {'list','slider','player','plot','2d','image','2dcol','2dplot','snake', ...
                     'frame','frames','3d','2dsim','2dlist','plotlist','mult'}
                 opt.type = a;
             case 'tt'
@@ -318,6 +187,8 @@ while k<nargin
                 opt.key = rand;
             case 'colormap'
                 opt.cmap = varargin{k}; k = k+1;
+            case {'worldim' 'worldims' 'worlddims'}
+                opt.worlddim = varargin{k}; k = k+1;
             otherwise
                 if isfield(opt,a)
                     opt.(a) = varargin{k}; k=k+1;
@@ -348,7 +219,7 @@ if ~isempty(numdata)
 end
 
 %---
-function opt = ArrangeOptions(opt)
+function opt = ArrangeAndGeometry(opt)
 
 % type
 % (empty type)
@@ -385,6 +256,14 @@ else
     doaddlist = false;
 end
 
+% attempt to correct row vector data as column vector
+if isvector(opt.data) && ~any(opt.proj==2)
+    opt.data = opt.data(:);
+end
+siz = size(opt.data);
+siz = siz(1:find(siz~=1,1,'last'));
+nddata = length(siz);
+
 % proj and dimsplus
 if isempty(opt.proj)
     nd = find(size(opt.data)>1,1,'last');
@@ -393,9 +272,9 @@ if isempty(opt.proj)
 elseif isnumeric(opt.proj)
     available = opt.proj;
     opt.proj = []; % might be redefined!
-    nd = sum(opt.proj);
+    %     nd = sum(opt.proj);
 elseif iscell(opt.proj)
-    nd = sum([opt.proj{:}]);
+    %     nd = sum([opt.proj{:}]);
 end
 if ~iscell(opt.type)
     opt.type = {opt.type}; 
@@ -439,6 +318,8 @@ if isempty(opt.proj)
                     % add as many additional lists as available
                     doaddlist = true;
                 end
+            case {'slider' 'player'}
+                opt.proj{k} = available(1); available(1) = [];
             case 'plot'
                 opt.proj{k} = available(1); available(1) = [];
                 if isequal(opt.dimsplus{k},0) && ~isempty(available) && ~doaddlist && k==ndisplay
@@ -446,8 +327,6 @@ if isempty(opt.proj)
                     % note that we leave this dimension available... anyway
                     % there are no further display since k==ndisplay
                 end
-            case 'slider'
-                opt.proj{k} = available(1); available(1) = [];
             case '2d'
                 if length(available)==1, available(2) = available(1)+1; end
                 opt.proj{k} = available(1:2); available(1:2) = [];
@@ -544,6 +423,177 @@ if n>1 && all(fn_isemptyc({opt.in}))
     cw = [0 cumsum(w)];
     for i=1:n, opt(i).in = subplot(1,wt,cw(i)+(1:w(i))); end
 end
+
+% Focus and Geometry
+if ~isempty(opt.geometry)
+    G = opt.geometry;
+    if ~isempty(opt.labels), G.labels = opt.labels; end
+    if ~isempty(opt.units), G.units = opt.units; end
+else
+    if ~isempty(opt.focus)
+        F = opt.focus;
+    else
+        F = focus.find(opt.key);
+        % default labels and units for newborn focus
+        if isempty(opt.labels) && isempty(opt.units) && F.nd == 0
+            F.labels = {'x' 'y' 'time'};
+        	F.units = {'px' 'px' 'frame'};
+        end 
+        opt.focus = F;
+    end
+    
+    % find a rotation object that matches size and mat
+    if ~isempty(opt.mat)
+        mat = opt.mat;
+    else
+        % world dims
+        if ~isempty(opt.worlddim)
+            worlddim = opt.worlddim;
+        else
+            worlddim = 1:nddata;
+        end
+        % scale
+        if ~isempty(opt.scale)
+            scale = opt.scale;
+        else
+            if isscalar(opt.dx), opt.dx = opt.dx([1 1]); end
+            scale = [opt.dx opt.dt];
+            if ~isempty(opt.worlddim)
+                scale(end+1:max(opt.worlddim)) = 1;
+                scale = scale(opt.worlddim);
+            end
+        end
+        scale(end+1:nddata) = 1;
+        % offset (difficult because default values depends on units!!)
+        if ~isempty(opt.start)
+            start = opt.start;
+        else
+            start = zeros(1,0);
+        end
+        worldunits = F.units;
+        worldunits(end:nddata) = {''};
+        for d = length(start)+1:nddata
+            if ismember(worldunits{worlddim(d)}, {'' 'px' 'frame'})
+                start(d) = 1;
+            else
+                start(d) = 0;
+            end
+        end
+        start(end+1:nddata) = 1;
+        offset = start-scale;
+        % mat
+        mat = {scale offset worlddim};
+    end
+    mat = buildMat(mat,nddata,nddata);
+
+    % does focus already have a child rotation that fits the data sizes and
+    % transformation?
+    % (if yes, take it)
+    c = F.getChildren;
+    for i=1:length(c)
+        dcomp = intersect(find(c{i}.sizes>1),find(siz>1));
+        dmat = [1 1+dcomp];
+        if all(c{i}.sizes(dcomp)==siz(dcomp)) ...
+                && isequal(c{i}.mat(1:size(mat,1),dmat), mat(:,dmat))
+            opt.geometry = c{i};
+            disp 'found matching geometry object'
+            break
+        end
+    end
+    % (if not, create a new one)
+    if isempty(opt.geometry)
+        disp 'create new geometry object'
+        opt.geometry = rotation(F,'sizes',siz,'mat',mat);
+    end
+end
+
+%---
+function a = Display(opt)
+
+% init structure (focus and geometry are already defined)
+a = struct('key',opt.key,'F',opt.focus,'G',opt.geometry,'SI',[],'D',[]);
+
+% Projection and Active Display
+switch lower(opt.type)
+    case 'plot'
+        a.SI = projection(a.G,opt.proj,'dimsplus',opt.dimsplus, ...
+            'data',opt.data,'decoration',opt.decoration);
+        if ndims(opt.data)>2 && length(opt.proj)>=3
+            if ~isempty(opt.in)
+                if fn_isfigurehandle(opt.in)
+                    hf = opt.in;
+                else
+                    hf = get(opt.in,'parent');
+                end
+            else
+                hf = gcf;
+            end
+            clf(hf)
+        end
+        a.D = activedisplayPlot(a.SI,'in',opt.in, ...
+            'ystep',opt.ystep, ...
+            'clipmode',opt.clipmode,'clip',opt.clip, ...
+            'autolinepos',opt.autolinepos, ...
+            'movelinegroup',opt.movelinegroup, ...
+            'navigation',opt.navigation,'scrollwheel',opt.scrollwheel);
+    case '2d'
+        if isa(opt.data,'VideoReader')
+            if ~isequal(opt.proj,[1 2])
+                error 'projection must be [1 2] for a video object'
+            end
+            if isempty(opt.nmovieframe)
+                a.SI = videoprojection(a.G,opt.data);
+            else
+                a.SI = videoprojection(a.G,opt.data,opt.nmovieframe);
+            end
+        else
+            a.SI = projection(a.G,opt.proj,'dimsplus',opt.dimsplus,'data',opt.data, ...
+                'decoration',opt.decoration);
+        end
+        a.D = activedisplayImage(a.SI,'in',opt.in, ...
+            'clipmode',opt.clipmode,'clip',opt.clip, ...
+            'selshow',opt.selshow,'seldims',opt.seldims,'shapemode',opt.shapemode, ...
+            'scaledisplay',opt.scaledisplay);
+        if ~isempty(opt.cmap), a.D.cmap = opt.cmap; end
+    case 'snake'
+        a.SI = snake2D(a.G,opt.proj,'dx',opt.snakedx,'data',opt.data, ...
+            'dimsplus',opt.dimsplus,'decoration',opt.decoration);
+        a.D = activedisplayImage(a.SI,'in',opt.in, ...
+            'clipmode',opt.clipmode,'clip',opt.clip, ...
+            'selshow',opt.selshow,'seldims',opt.seldims);
+    case {'3d' 'frame' 'grid'}
+        if strcmpi(opt.type,'3d') && isequal(opt.proj,1:3) ...
+                && size(opt.data,4)==3 && isempty(opt.dimsplus)
+            opt.dimsplus=4; 
+        end
+        a.SI = projection(a.G,opt.proj,'data',opt.data, ...
+            'dimsplus',opt.dimsplus,'decoration',opt.decoration);
+        switch lower(opt.type)
+            case '3d'
+                a.D = activedisplay3D(a.SI,'in',opt.in, ...
+                    'clipmode',opt.clipmode,'clip',opt.clip);
+            case 'frame'
+                a.D = activedisplayFrames(a.SI,'in',opt.in, ...
+                    'clipmode',opt.clipmode,'clip',opt.clip, ...
+                    'ncol',opt.ncol);
+            case 'grid'
+                a.D = activedisplayArray(a.SI,'in',opt.in);
+                if ~isempty(opt.cmap), a.D.cmap = opt.cmap; end
+        end
+    case 'list'
+        if ~isscalar(opt.proj), error 'projection should have one dimension for list display', end
+        a.SI = projection(a.G,opt.proj); %,'data',opt.data);
+        a.D = activedisplayList(a.SI,'in',opt.in,'selmultin',~opt.averageselection);
+    case 'slider'
+        a.SI = projection(a.G,opt.proj,'decoration',opt.decoration);
+        a.D = activedisplaySlider(a.SI,'in',opt.in,'layout',opt.layout);
+    case 'player'
+        a.SI = projection(a.G,opt.proj,'decoration',opt.decoration);
+        a.D = activedisplayPlayer(a.SI,'in',opt.in);
+    otherwise
+        error('cannot handle type ''%s'' yet',opt.type)
+end
+
 
 
 %---
