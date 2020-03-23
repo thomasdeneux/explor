@@ -130,7 +130,7 @@ opt2 = ArrangeAndGeometry(opt1);
 % no data: we have set up the focus and geometry for next times, this is
 % fine we can stop here [doesn't work because no pointer is kept on them
 % and they are destroyed!]
-if isempty(opt2.data)
+if isscalar(opt2) && isempty(opt2.data)
     return
 end
 
@@ -425,86 +425,88 @@ if n>1 && all(fn_isemptyc({opt.in}))
 end
 
 % Focus and Geometry
-if ~isempty(opt.geometry)
-    G = opt.geometry;
-    if ~isempty(opt.labels), G.labels = opt.labels; end
-    if ~isempty(opt.units), G.units = opt.units; end
-else
-    if ~isempty(opt.focus)
-        F = opt.focus;
+for k = 1:length(opt)
+    optk = opt(k);
+    if ~isempty(optk.geometry)
+        G = optk.geometry;
+        if ~isempty(optk.labels), G.labels = optk.labels; end
+        if ~isempty(optk.units), G.units = optk.units; end
     else
-        F = focus.find(opt.key);
-        % default labels and units for newborn focus
-        if isempty(opt.labels) && isempty(opt.units) && F.nd == 0
-            F.labels = {'x' 'y' 'time'};
-        	F.units = {'px' 'px' 'frame'};
-        end 
-        opt.focus = F;
-    end
-    
-    % find a rotation object that matches size and mat
-    if ~isempty(opt.mat)
-        mat = opt.mat;
-    else
-        % world dims
-        if ~isempty(opt.worlddim)
-            worlddim = opt.worlddim;
+        if ~isempty(optk.focus)
+            F = optk.focus;
         else
-            worlddim = 1:nddata;
+            F = focus.find(optk.key);
+            % default labels and units for newborn focus
+            if isempty(optk.labels) && isempty(optk.units) && F.nd == 0
+                F.labels = {'x' 'y' 'time'};
+                F.units = {'px' 'px' 'frame'};
+            end 
+            optk.focus = F;
         end
-        % scale
-        if ~isempty(opt.scale)
-            scale = opt.scale;
-        else
-            if isscalar(opt.dx), opt.dx = opt.dx([1 1]); end
-            scale = [opt.dx opt.dt];
-            if ~isempty(opt.worlddim)
-                scale(end+1:max(opt.worlddim)) = 1;
-                scale = scale(opt.worlddim);
-            end
-        end
-        scale(end+1:nddata) = 1;
-        % offset (difficult because default values depends on units!!)
-        if ~isempty(opt.start)
-            start = opt.start;
-        else
-            start = zeros(1,0);
-        end
-        worldunits = F.units;
-        worldunits(end:nddata) = {''};
-        for d = length(start)+1:nddata
-            if ismember(worldunits{worlddim(d)}, {'' 'px' 'frame'})
-                start(d) = 1;
-            else
-                start(d) = 0;
-            end
-        end
-        start(end+1:nddata) = 1;
-        offset = start-scale;
-        % mat
-        mat = {scale offset worlddim};
-    end
-    mat = buildMat(mat,nddata,nddata);
 
-    % does focus already have a child rotation that fits the data sizes and
-    % transformation?
-    % (if yes, take it)
-    c = F.getChildren;
-    for i=1:length(c)
-        dcomp = intersect(find(c{i}.sizes>1),find(siz>1));
-        dmat = [1 1+dcomp];
-        if all(c{i}.sizes(dcomp)==siz(dcomp)) ...
-                && isequal(c{i}.mat(1:size(mat,1),dmat), mat(:,dmat))
-            opt.geometry = c{i};
-            disp 'found matching geometry object'
-            break
+        % find a rotation object that matches size and mat
+        if ~isempty(optk.mat)
+            mat = optk.mat;
+        else
+            % world dims
+            if ~isempty(optk.worlddim)
+                worlddim = optk.worlddim;
+            else
+                worlddim = 1:nddata;
+            end
+            % scale
+            if ~isempty(optk.scale)
+                scale = optk.scale;
+            else
+                if isscalar(optk.dx), optk.dx = optk.dx([1 1]); end
+                worldscale = [optk.dx optk.dt];
+                worldscale(end+1:max(worlddim)) = 1;
+                scale = worldscale(optk.worlddim);
+            end
+            scale(end+1:nddata) = 1;
+            % offset (difficult because default values depends on units!!)
+            if ~isempty(optk.start)
+                start = optk.start;
+            else
+                start = zeros(1,0);
+            end
+            worldunits = F.units;
+            worldunits(end:nddata) = {''};
+            for d = length(start)+1:nddata
+                if ismember(worldunits{worlddim(d)}, {'' 'px' 'frame'})
+                    start(d) = 1;
+                else
+                    start(d) = 0;
+                end
+            end
+            start(end+1:nddata) = 1;
+            offset = start-scale;
+            % mat
+            mat = {scale offset worlddim};
+        end
+        mat = buildMat(mat,nddata,nddata);
+
+        % does focus already have a child rotation that fits the data sizes and
+        % transformation?
+        % (if yes, take it)
+        c = F.getChildren;
+        for i=1:length(c)
+            dcomp = intersect(find(c{i}.sizes>1),find(siz>1));
+            dmat = [1 1+dcomp];
+            if all(c{i}.sizes(dcomp)==siz(dcomp)) ...
+                    && isequal(c{i}.mat(1:size(mat,1),dmat), mat(:,dmat))
+                optk.geometry = c{i};
+                disp 'found matching geometry object'
+                break
+            end
+        end
+        % (if not, create a new one)
+        if isempty(optk.geometry)
+            disp 'create new geometry object'
+            optk.geometry = rotation(F,'sizes',siz,'mat',mat);
         end
     end
-    % (if not, create a new one)
-    if isempty(opt.geometry)
-        disp 'create new geometry object'
-        opt.geometry = rotation(F,'sizes',siz,'mat',mat);
-    end
+    opt(k) = optk;
 end
 
 %---
