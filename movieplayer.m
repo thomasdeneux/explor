@@ -57,7 +57,7 @@ classdef movieplayer < fn4Dhandle
             D.slider = fn_slider('parent',opt.in,'callback',@(u,e)D.sliderupdate());
             fn_pixelsizelistener(opt.in,D,@(u,e)D.positioncontrols())
             propname = fn_switch(get(opt.in,'type'),'figure','Color','uipanel','BackgroundColor');
-            connectlistener(opt.in,D,propname,'PostSet',@(u,e)D.positioncontrols())
+            connect_listener(opt.in,D,propname,'PostSet',@(u,e)D.positioncontrols())
             D.positioncontrols()
             
             % delete object upon deletion of any button

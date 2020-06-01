@@ -244,7 +244,7 @@ classdef activedisplayImage < fn4Dhandle
             set(D.ha,'ButtonDownFcn',@(ha,evnt)Mouse(D))
             set(D.txt,'buttondownfcn',@(hu,evnt)Mouse(D,'outside'))
             set(D.buttons(1),'buttondownfcn',@(hu,evnt)redbutton(D))
-            fn_scrollwheelregister(D.ha,@(n)Scroll(D,n),fn_switch(D.scrollwheel,'on/off'))
+            fn_scrollwheelregister(D.ha,@(n)Scroll(D,n),onoff(D.scrollwheel))
             initlocalmenu(D)
 %             try
 %                 initlocalmenu(D.SI,D.buttons(3))
@@ -297,7 +297,7 @@ classdef activedisplayImage < fn4Dhandle
             set(hb,'uicontextmenu',m)
             
             % keep menu visible
-            info.pin = uimenu(m,'label','keep menu visible','checked',fn_switch(D.menustayvisible), ...
+            info.pin = uimenu(m,'label','keep menu visible','checked',onoff(D.menustayvisible), ...
                     'callback',@(u,e)set(D,'menustayvisible',~D.menustayvisible));
             function xx(fun,varargin)
                 if D.menustayvisible, set(D.menu,'visible','on'), end
@@ -360,7 +360,7 @@ classdef activedisplayImage < fn4Dhandle
             set(info.selmultin.(D.selmultin),'checked','on')
             
             % selection mode/display/reset
-            info.seledit = uimenu(m,'label','advanced selection','separator','on','checked',fn_switch(D.seleditmode), ...
+            info.seledit = uimenu(m,'label','advanced selection','separator','on','checked',onoff(D.seleditmode), ...
                 'callback',@(u,e)xx(@()set(D,'seleditmode',~D.seleditmode)));
             m1 = uimenu(m,'label','display selection marks');
             uimenu(m1,'label','none', ...
@@ -369,11 +369,11 @@ classdef activedisplayImage < fn4Dhandle
                 'callback',@(u,e)xx(@()set(D,'selshow','shape+number')));            
             uimenu(m1,'label','cross', ...
                 'callback',@(u,e)xx(@()set(D,'selshow','cross')));            
-            info.selshow.shape = uimenu(m1,'label','shape','separator','on','checked',fn_switch(strfind(D.selshow,'shape')), ... 
+            info.selshow.shape = uimenu(m1,'label','shape','separator','on','checked',onoff(strfind(D.selshow,'shape')), ... 
                 'callback',@(u,e)xx(@()set(D,'selshow','toggle shape')));            
-            info.selshow.number= uimenu(m1,'label','number','checked',fn_switch(strfind(D.selshow,'number')), ... 
+            info.selshow.number= uimenu(m1,'label','number','checked',onoff(strfind(D.selshow,'number')), ... 
                 'callback',@(u,e)xx(@()set(D,'selshow','toggle number')));            
-            info.selshow.cross = uimenu(m1,'label','cross','checked',fn_switch(strfind(D.selshow,'cross')), ... 
+            info.selshow.cross = uimenu(m1,'label','cross','checked',onoff(strfind(D.selshow,'cross')), ... 
                 'callback',@(u,e)xx(@()set(D,'selshow','toggle cross')));                        
             info.selcolor = uimenu(m,'label','color selection marks', ...
                 'callback',@(u,e)xx(@()set(D,'selcolor',~D.selcolor)));            
@@ -436,7 +436,7 @@ classdef activedisplayImage < fn4Dhandle
                 'callback',@(u,e)xx(@()set(D,'cmap','maporient')));
             info.cmap.user = uimenu(m1,'label','user...', ...
                 'callback',@(u,e)xx(@()set(D,'cmap','user')));
-            info.logscale = uimenu(m1,'label','log scale','checked',fn_switch(D.logscale),'separator','on', ...
+            info.logscale = uimenu(m1,'label','log scale','checked',onoff(D.logscale),'separator','on', ...
                 'callback',@(u,e)xx(@()set(D,'logscale',~D.logscale)));
             set(info.cmap.(D.cmap),'checked','on') 
             % (clipping mode)
@@ -1221,7 +1221,7 @@ classdef activedisplayImage < fn4Dhandle
                 case {'link1','link2'}
                     D.CL = cliplink.find(clipmode,D.clip);
                     D.clip = D.CL.clip;
-                    D.C2D = connectlistener(D.CL,D,'ChangeClip', ...
+                    D.C2D = connect_listener(D.CL,D,'ChangeClip', ...
                         @(cl,evnt)clipfromlink(D,D.CL));
             end
         end      
@@ -1393,7 +1393,7 @@ classdef activedisplayImage < fn4Dhandle
         end
         function set.menustayvisible(D,val)
             D.menustayvisible = val;
-            set(D.menuitems.pin,'checked',fn_switch(val))
+            set(D.menuitems.pin,'checked',onoff(val))
             if val
                 set(D.menu,'pos',get(D.hf,'currentpoint'),'visible','on')
             end
@@ -1411,13 +1411,13 @@ classdef activedisplayImage < fn4Dhandle
             D.doratio = b;
         end
         function b = get.crossshow(D)
-            b = fn_switch(get(D.cross(1),'visible'));
+            b = boolean(get(D.cross(1),'visible'));
         end
         function set.crossshow(D,b)
             if b==D.crossshow, return, end
-            onoff = fn_switch(b);
-            set(D.menuitems.features.crossshow,'checked',onoff)
-            set(D.cross,'visible',onoff)
+            on_off = on_off(b);
+            set(D.menuitems.features.crossshow,'checked',on_off)
+            set(D.cross,'visible',on_off)
         end
         function set.dataflag(D,str)
             D.dataflag = str;
@@ -1475,7 +1475,7 @@ classdef activedisplayImage < fn4Dhandle
         function set.logscale(D,b)
             if b==D.logscale, return, end
             D.logscale = b;
-            set(D.menuitems.logscale,'checked',fn_switch(b))
+            set(D.menuitems.logscale,'checked',onoff(b))
             D.displaydata2
         end
         function set.channelcolors(D,a)
@@ -1594,7 +1594,7 @@ classdef activedisplayImage < fn4Dhandle
             displayselection(D,'all')
             for i=1:length(allflags)
                 f = allflags{i};
-                set(D.menuitems.selshow.(f),'checked',fn_switch(ismember(f,flagc)))
+                set(D.menuitems.selshow.(f),'checked',onoff(ismember(f,flagc)))
             end
         end
         function set.selcolor(D,b)
@@ -1642,10 +1642,10 @@ classdef activedisplayImage < fn4Dhandle
             D.navigation = val;
         end
         function set.scrollwheel(D,val)
-            val = fn_switch(val,'logical');
+            val = boolean(val);
             if D.scrollwheel==val, return, end
             D.scrollwheel = val;
-            fn_scrollwheelregister(D.ha,fn_switch(val,'on/off'))
+            fn_scrollwheelregister(D.ha,onoff(val))
         end
     end
     

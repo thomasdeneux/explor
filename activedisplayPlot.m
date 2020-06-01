@@ -150,7 +150,7 @@ classdef activedisplayPlot < fn4Dhandle  %#ok<*MCSUP>
             D.ha2(3) = axes('parent',D.hf,'buttondownfcn',@(u,e)Mouse(D,'outsideboth'));
             fn_controlpositions(D.ha2(3),D.ha,[0 0 0 0], [-15 -15 15 15]);
             set(D.ha2,'handlevisibility','off')
-            D.listenparentcolor = connectlistener(D.hf,D,'Color','PostSet',@(u,e)updateSecondaryAxesColor());
+            D.listenparentcolor = connect_listener(D.hf,D,'Color','PostSet',@(u,e)updateSecondaryAxesColor());
             updateSecondaryAxesColor()
             function updateSecondaryAxesColor()
                 try %#ok<TRYNC>
@@ -228,7 +228,7 @@ classdef activedisplayPlot < fn4Dhandle  %#ok<*MCSUP>
             set(hb,'uicontextmenu',m)
             
             % keep menu visible
-            info.pin = uimenu(m,'label','keep menu visible','checked',fn_switch(D.menustayvisible), ...
+            info.pin = uimenu(m,'label','keep menu visible','checked',onoff(D.menustayvisible), ...
                     'callback',@(u,e)set(D,'menustayvisible',~D.menustayvisible));
             function xx(fun,varargin)
                 if D.menustayvisible, set(D.menu,'visible','on'), end
@@ -279,7 +279,7 @@ classdef activedisplayPlot < fn4Dhandle  %#ok<*MCSUP>
                 'callback',@(u,e)xx(@()set(D,'movelinegroup','sel')));      
             info.moveline(3) = uimenu(m,'label','move lines per category', ...
                 'callback',@(u,e)xx(@()set(D,'movelinegroup','cat')));  
-            info.moveyonly = uimenu(m,'label','move only in y','checked',fn_switch(D.moveyonly), ...
+            info.moveyonly = uimenu(m,'label','move only in y','checked',onoff(D.moveyonly), ...
                 'callback',@(u,e)xx(@()set(D,'moveyonly',~D.moveyonly)));
             b = fn_ismemberstr({'','sel','cat'},D.movelinegroup);
             set(info.moveline(b),'checked','on') 
@@ -346,8 +346,8 @@ classdef activedisplayPlot < fn4Dhandle  %#ok<*MCSUP>
                 set(D.ha,'xcolor',col,'ycolor',col)
             end
             % (scale bar)
-            info.scalebar = uimenu(m,'label','scale bar','checked',fn_switch(strcmp(D.scaledisplay,'ybar')), ...
-                'callback',@(u,e)xx(@()set(D,'scaledisplay',fn_switch(D.scaledisplay,'','ybar',''))));
+            info.scalebar = uimenu(m,'label','scale bar','checked',onoff(strcmp(D.scaledisplay,'ybar')), ...
+                'callback',@(u,e)xx(@()set(D,'scaledisplay',onoff(D.scaledisplay,'','ybar',''))));
 
             uimenu(m,'label','duplicate in new figure','separator','on', ...
                 'callback',@(u,e)xx(@()duplicate(D)));
@@ -522,7 +522,7 @@ classdef activedisplayPlot < fn4Dhandle  %#ok<*MCSUP>
                     D.activeidx = cumsum(logical([slice.active]));
                     % line visibility
                     for k=ind
-                        set(D.hplot{k},'visible',fn_switch(slice(k).active))
+                        set(D.hplot{k},'visible',onoff(slice(k).active))
                     end
                     % re-dispatch iff no line has been moved by user
                     allyxdec = [D.yxdec{:}];
@@ -1103,7 +1103,7 @@ classdef activedisplayPlot < fn4Dhandle  %#ok<*MCSUP>
                     kitem = 2+str2double(clipmode(5));
                     D.CL = cliplink.find(clipmode,D.clip);
                     D.clip = D.CL.clip;
-                    D.C2D = connectlistener(D.CL,D,'ChangeClip', ...
+                    D.C2D = connect_listener(D.CL,D,'ChangeClip', ...
                         @(cl,evnt)clipfromlink(D,D.CL));
                 otherwise
                     D.clipmode = slice;
@@ -1167,7 +1167,7 @@ classdef activedisplayPlot < fn4Dhandle  %#ok<*MCSUP>
             end
             D.scaledisplay = flag;
             displayscalebar(D)
-            set(D.menuitems.scalebar,'checked',fn_switch(strcmp(flag,'ybar')))
+            set(D.menuitems.scalebar,'checked',onoff(strcmp(flag,'ybar')))
         end
         function set.movescale(D,b)
             D.movescale = b;
@@ -1224,7 +1224,7 @@ classdef activedisplayPlot < fn4Dhandle  %#ok<*MCSUP>
             % set property
             D.moveyonly = b;
             % update mark
-            set(D.menuitems.moveyonly,'checked',fn_switch(b))
+            set(D.menuitems.moveyonly,'checked',onoff(b))
         end
         function set.linecol(D,val)
             oldval = D.linecol;
@@ -1341,7 +1341,7 @@ classdef activedisplayPlot < fn4Dhandle  %#ok<*MCSUP>
         end
         function set.menustayvisible(D,val)
             D.menustayvisible = val;
-            set(D.menuitems.pin,'checked',fn_switch(val))
+            set(D.menuitems.pin,'checked',onoff(val))
             if val
                 set(D.menu,'pos',get(D.hf,'currentpoint'),'visible','on')
             end

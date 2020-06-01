@@ -82,7 +82,7 @@ classdef activedisplayList < fn4Dhandle
             % list and event (bottom-up)
             set(D.hu,'style','listbox','min',0,'max',2, ...
                 'callback',@(hu,evnt)event(D,'select'))
-            if fn_switch(D.scrollwheel)
+            if boolean(D.scrollwheel)
                 D.scrollwheel = 'on'; % this will automaticall register scroll wheel
             end
             
@@ -119,7 +119,7 @@ classdef activedisplayList < fn4Dhandle
             uimenu(m,'label','remove highlighted selections','callback',@(u,e)event(D,'rm'))
             uimenu(m,'label','remove all selections','callback',@(u,e)event(D,'rmall'))
 
-            D.menuitems.selmultin = uimenu(m,'separator','on','checked',fn_switch(D.selmultin), ...
+            D.menuitems.selmultin = uimenu(m,'separator','on','checked',onoff(D.selmultin), ...
                 'label','temporary selection: individuals','callback',@(u,e)set(D,'selmultin',~D.selmultin));
             uimenu(m,'label','select all','accelerator','A','callback',@(u,e)event(D,'selectall'))
             
@@ -338,7 +338,7 @@ classdef activedisplayList < fn4Dhandle
             if val==D.selmultin, return, end
             D.selmultin = val;
             % update menu item
-            set(D.menuitems.selmultin,'checked',fn_switch(val)) %#ok<MCSUP>
+            set(D.menuitems.selmultin,'checked',onoff(val)) %#ok<MCSUP>
             % update selection
             event(D,'select')
         end

@@ -135,7 +135,7 @@ classdef activedisplay3D < fn4Dhandle
             D.scalebar(2) = text('Parent',D.ha(1),'Color','white','visible','off', ...
                 'horizontalalignment','center','verticalalignment','middle');
             disp 'warning: position listener ''listenaxpos'' disabled for compatibility with new Matlab version'
-            %             D.listenaxpos = connectlistener(D.ha(1),D,'Position','PostSet', ...
+            %             D.listenaxpos = connect_listener(D.ha(1),D,'Position','PostSet', ...
             %                 @(h,evnt)displayscalebar(D));
             %             D.listenaxpos.Enable = 'off';
             
@@ -889,7 +889,7 @@ classdef activedisplay3D < fn4Dhandle
                 case {'link1','link2'}
                     D.CL = cliplink.find(clipmode,D.clip);
                     D.clip = D.CL.clip;
-                    D.C2D = connectlistener(D.CL,D,'ChangeClip', ...
+                    D.C2D = connect_listener(D.CL,D,'ChangeClip', ...
                         @(cl,evnt)clipfromlink(D,D.CL));
             end
         end
