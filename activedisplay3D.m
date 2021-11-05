@@ -113,7 +113,7 @@ classdef activedisplay3D < fn4Dhandle
             % handle to change the size of the 3 axes
             D.handle = uicontrol('parent',D.hf, ...
                 'enable','inactive','buttondownfcn',@(u,e)axespositionsmanual(D), ...
-                'visible',fn_switch(~D.dopixelratio));
+                'visible',onoff(~D.dopixelratio));
             
             % image
             for i=1:3
@@ -293,7 +293,7 @@ classdef activedisplay3D < fn4Dhandle
                 set(m2,'checked',onoff)
                 set(D.cross,'visible',onoff)
             end
-            info.dopixelratio = uimenu(m,'label','constrain pixel ratio','checked',fn_switch(D.dopixelratio), ...
+            info.dopixelratio = uimenu(m,'label','constrain pixel ratio','checked',onoff(D.dopixelratio), ...
                 'callback',@(hu,evnt)set(D,'dopixelratio',~D.dopixelratio));
             
             info.distline = uimenu(m,'label','distance tool','separator','on', ...
@@ -974,9 +974,9 @@ classdef activedisplay3D < fn4Dhandle
             if val==D.dopixelratio, return, end
             D.dopixelratio = val;
             % update marks
-            set(D.handle,'visible',fn_switch(~val))
-            set(D.menuitems.dopixelratio,'checked',fn_switch(val))
-            %set(D.poslistener,'Enabled',fn_switch(val))
+            set(D.handle,'visible',onoff(~val))
+            set(D.menuitems.dopixelratio,'checked',onoff(val))
+            %set(D.poslistener,'Enabled',onoff(val))
             
             % update display
             axespositions(D)
