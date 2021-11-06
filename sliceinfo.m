@@ -288,7 +288,8 @@ classdef sliceinfo < fn4Dhandle
             
             % update selection
             updateselection(SI.selection,dims,flag,ind,value);
-            notifycond(SI,fn4Devent('selection',dims,flag,ind,value))
+            ev = fn4Devent('selection',dims,flag,ind,value);
+            notifycond(SI,ev)
         end
         
         function setselection(SI,varargin)

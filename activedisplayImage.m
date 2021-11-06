@@ -2392,8 +2392,10 @@ classdef activedisplayImage < fn4Dhandle
                     displayzoom(D)
                 case 'selection'
                     seldimsnum = D.seldims-'w';
-                    if ~any(ismember(seldimsnum,evnt.dims)), return, end % orthogonal selection, for example when image show (space x time) and selections displayed are along space, temporal selection are just ignored
-                    if ~all(ismember(seldimsnum,evnt.dims)), disp 'selection change is not compatible with display', return, end
+                    if ~strcmp(evnt.selflag,'reset') 
+                        if ~any(ismember(seldimsnum,evnt.dims)), return, end % orthogonal selection, for example when image show (space x time) and selections displayed are along space, temporal selection are just ignored
+                        if ~all(ismember(seldimsnum,evnt.dims)), disp 'selection change is not compatible with display', return, end
+                    end
                     updateselection(D,evnt.selflag,evnt.ind,evnt.value)
                     if D.selcolor, displaydata2(D), end
                     % note: if selflag is 'indices' it might be that the

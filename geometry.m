@@ -197,7 +197,8 @@ classdef geometry < fn4Dhandle
         function updateselection(G,dims,flag,varargin)
             fn4D_dbstack
             updateselection(G.selection,dims,flag,varargin{:});
-            notifycond(G,fn4Devent('selection',dims,flag,varargin{:}))
+            ev = fn4Devent('selection',dims,flag,varargin{:});
+            notifycond(G,ev)
         end
     end
     
